@@ -1,7 +1,6 @@
 #[starknet::contract]
 pub mod erc20 {
     use acl::acl::component::AclComponent;
-    use acl::acl::interface::IAcl;
     use openzeppelin::token::erc20::{ERC20Component, ERC20HooksEmptyImpl};
     use openzeppelin::token::erc20::interface::IERC20Metadata;
     use openzeppelin::token::erc20::interface::IERC20;
@@ -21,9 +20,12 @@ pub mod erc20 {
         pub acl: AclComponent::Storage,
     }
 
-    // #[abi(embed_v0)]
     impl ERC20Impl = ERC20Component::ERC20Impl<ContractState>;
     impl ERC20Internal = ERC20Component::InternalImpl<ContractState>;
+
+    #[abi(embed_v0)]
+    impl AclImpl = AclComponent::AclImpl<ContractState>;
+    impl AclInternal = AclComponent::IAclInternalImpl<ContractState>;
 
     #[event]
     #[derive(Drop, starknet::Event)]
@@ -38,19 +40,19 @@ pub mod erc20 {
     impl MyERC20MetadataImpl of IERC20Metadata<ContractState> {
         fn name(self: @ContractState) -> ByteArray {
             let mut args = ArrayTrait::new();
-            self.acl.is_approved(starknet::get_caller_address(), args.span());
+            self.acl.is_approved(args.span());
             self.erc20.name()
         }
 
         fn symbol(self: @ContractState) -> ByteArray {
             let mut args = ArrayTrait::new();
-            self.acl.is_approved(starknet::get_caller_address(), args.span());
+            self.acl.is_approved( args.span());
             self.erc20.symbol()
         }
 
         fn decimals(self: @ContractState) -> u8 {
             let mut args = ArrayTrait::new();
-            self.acl.is_approved(starknet::get_caller_address(), args.span());
+            self.acl.is_approved(args.span());
             self.erc20.decimals()
         }
     }
@@ -59,14 +61,14 @@ pub mod erc20 {
     impl MyERC20Impl of IERC20<ContractState> {
         fn total_supply(self: @ContractState) -> u256 {
             let mut args = ArrayTrait::new();
-            self.acl.is_approved(starknet::get_caller_address(), args.span());
+            self.acl.is_approved(args.span());
             self.erc20.total_supply()
         }
 
         fn balance_of(self: @ContractState, account: ContractAddress) -> u256 {
             let mut args = ArrayTrait::new();
             account.serialize(ref args);
-            self.acl.is_approved(starknet::get_caller_address(), args.span());
+            self.acl.is_approved(args.span());
             self.erc20.balance_of(account)
         }
 
@@ -74,32 +76,19 @@ pub mod erc20 {
             let mut args = ArrayTrait::new();
             owner.serialize(ref args);
             spender.serialize(ref args);
-            self.acl.is_approved(starknet::get_caller_address(), args.span());
+            self.acl.is_approved(args.span());
             self.erc20.allowance(owner, spender)
         }
 
         fn transfer(ref self: ContractState, recipient: ContractAddress, amount: u256) -> bool {
-            let mut args = ArrayTrait::new();
-            recipient.serialize(ref args);
-            amount.serialize(ref args);
-            self.acl.is_approved(starknet::get_caller_address(), args.span());
             self.erc20.transfer(recipient, amount)
         }
         
         fn transfer_from(ref self: ContractState, sender: ContractAddress, recipient: ContractAddress, amount: u256) -> bool {
-            let mut args = ArrayTrait::new();
-            sender.serialize(ref args);
-            recipient.serialize(ref args);
-            amount.serialize(ref args);
-            self.acl.is_approved(starknet::get_caller_address(), args.span());
             self.erc20.transfer_from(sender, recipient, amount)
         }
         
         fn approve(ref self: ContractState, spender: ContractAddress, amount: u256) -> bool {
-            let mut args = ArrayTrait::new();
-            spender.serialize(ref args);
-            amount.serialize(ref args);
-            self.acl.is_approved(starknet::get_caller_address(), args.span());
             self.erc20.approve(spender, amount)
         }
     }

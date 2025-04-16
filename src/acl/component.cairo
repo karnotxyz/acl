@@ -14,8 +14,8 @@ pub mod AclComponent {
     #[derive(Drop, starknet::Event)]
     pub enum Event {}
 
-    #[embeddable_as(ACLImpl)]
-    pub impl ACL<
+    #[embeddable_as(AclImpl)]
+    pub impl Acl<
         TContractState, +HasComponent<TContractState>,
     > of IAcl<ComponentState<TContractState>> {
         fn give_approval(
@@ -28,16 +28,19 @@ pub mod AclComponent {
             self.approvals.write((function_selector, hash, to), true);
         }
 
+    }
 
+    #[generate_trait]
+    pub impl IAclInternalImpl< TContractState, +HasComponent<TContractState>> of IAclInternal<TContractState> {
         fn is_approved(
             self: @ComponentState<TContractState>,
-            caller: ContractAddress,
             args: Span<felt252>,
         ) -> bool {
             let hash = poseidon::poseidon_hash_span(args);
             let execution_info = starknet::get_execution_info().unbox();
-            let approved_till = self.approvals.read((execution_info.entry_point_selector, hash, caller));
+            let approved_till = self.approvals.read((execution_info.entry_point_selector, hash, starknet::get_caller_address()));
             approved_till
         }
     }
+    
 }
