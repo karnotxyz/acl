@@ -1,11 +1,11 @@
 #[starknet::contract]
 pub mod ComplianceContract {
-    use starknet::storage::{ StoragePointerWriteAccess, StorableStoragePointerReadAccess };
+    use starknet::storage::{StoragePointerWriteAccess, StorableStoragePointerReadAccess};
     use crate::compliance::interface::ICompliance;
 
     #[storage]
     struct Storage {
-        fee: u8
+        fee: u8,
     }
 
     #[constructor]

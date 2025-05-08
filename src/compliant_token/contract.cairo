@@ -16,6 +16,7 @@ mod CompliantToken {
     use core::traits::Into;
     use core::num::traits::Zero;
     use acl::onchain_id::interface::{IOnchainIdDispatcher, IOnchainIdDispatcherTrait};
+    use crate::compliance::interface::{IComplianceDispatcher, IComplianceDispatcherTrait};
     use crate::identity_registry::interface::{
         IIdentityRegistryDispatcher, IIdentityRegistryDispatcherTrait,
     };
@@ -146,9 +147,19 @@ mod CompliantToken {
                 assert(claim_exists, 'Receiver should have the claim');
             };
 
-            let fee_amt = 0;
-            for i in self.complian
-            self.erc20.transfer(recipient, amount)
+            let mut fee_in_basis = 0;
+            for i in 0..self.compliance_modules.len() {
+                let compliance_module = self.compliance_modules.at(i).read();
+                let compliance_module_dispatcher = IComplianceDispatcher {
+                    contract_address: compliance_module,
+                };
+                let fee = compliance_module_dispatcher.get_fee();
+                fee_in_basis += fee.into();
+            };
+
+            let fee_amt = amount * fee_in_basis / 100_00;
+            self.erc20.transfer(self.ownable.owner(), fee_amt);
+            self.erc20.transfer(recipient, amount - fee_amt)
         }
 
         fn transfer_from(
