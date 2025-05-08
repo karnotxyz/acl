@@ -3,9 +3,6 @@ pub mod acl {
     pub mod interface;
 }
 
-
-pub mod erc20;
-
 pub mod compliant_token {
     pub mod interface;
     pub mod contract;

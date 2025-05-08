@@ -1,10 +1,12 @@
 #[starknet::contract]
 mod CompliantToken {
     use starknet::storage::{Vec, MutableVecTrait, StoragePointerWriteAccess};
-    use starknet::ContractAddress;
+    use starknet::{ContractAddress, get_caller_address};
     use acl::compliant_token::interface::{ICompliantToken, Claim};
-    use acl::acl::component::AclComponent;
+    use acl::acl::component::{AclComponent};
+    use acl::acl::interface::IAcl;
     use openzeppelin::token::erc20::{ERC20Component, ERC20HooksEmptyImpl};
+    use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::token::erc20::interface::IERC20Metadata;
     use openzeppelin::token::erc20::interface::IERC20;
     use core::integer::u256;
@@ -13,13 +15,20 @@ mod CompliantToken {
 
     component!(path: ERC20Component, storage: erc20, event: erc20);
     component!(path: AclComponent, storage: acl, event: acl);
+    component!(path: OwnableComponent, storage: ownable, event: ownable);
 
+    // ERC20
     impl ERC20Impl = ERC20Component::ERC20Impl<ContractState>;
     impl ERC20Internal = ERC20Component::InternalImpl<ContractState>;
 
-    #[abi(embed_v0)]
+    // ACL
     impl AclImpl = AclComponent::AclImpl<ContractState>;
     impl AclInternal = AclComponent::IAclInternalImpl<ContractState>;
+
+    // Ownable
+    #[abi(embed_v0)]
+    impl OwnableImpl = OwnableComponent::OwnableImpl<ContractState>;
+    impl OwnableInternal = OwnableComponent::InternalImpl<ContractState>;
 
     #[storage]
     pub struct Storage {
@@ -29,6 +38,8 @@ mod CompliantToken {
         pub erc20: ERC20Component::Storage,
         #[substorage(v0)]
         pub acl: AclComponent::Storage,
+        #[substorage(v0)]
+        pub ownable: OwnableComponent::Storage,
     }
 
 
@@ -39,11 +50,15 @@ mod CompliantToken {
         erc20: ERC20Component::Event,
         #[flat]
         acl: AclComponent::Event,
+        #[flat]
+        ownable: OwnableComponent::Event,
     }
 
 
     #[constructor]
-    fn constructor(ref self: ContractState) {}
+    fn constructor(ref self: ContractState, owner: ContractAddress) {
+        self.ownable.initializer(owner);
+    }
 
     #[abi(embed_v0)]
     impl ICompliantTokenImpl of ICompliantToken<ContractState> {
@@ -53,6 +68,28 @@ mod CompliantToken {
 
         fn add_claim_check(ref self: ContractState, claim: Claim) {
             self.required_claims.append().write(claim);
+        }
+    }
+
+    #[abi(embed_v0)]
+    impl MyAclImpl of IAcl<ContractState> {
+        fn give_approval(
+            ref self: ContractState,
+            function_selector: felt252,
+            to: ContractAddress,
+            args: Span<felt252>,
+        ) {
+            let caller = get_caller_address();
+            if function_selector == selector!("balance_of") {
+                assert(caller.into() == *args[0], 'Caller not the owner');
+            } else if function_selector == selector!("total_supply")
+                || function_selector == selector!("decimals")
+                || function_selector == selector!("symbol")
+                || function_selector == selector!("name") {
+                assert(caller.into() == self.ownable.owner(), 'Caller not the owner');
+            };
+
+            self.acl.give_approval(function_selector, to, args);
         }
     }
 
