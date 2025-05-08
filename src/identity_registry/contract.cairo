@@ -2,8 +2,6 @@
 pub mod identity_registry {
     use starknet::{ContractAddress, get_caller_address};
     use starknet::storage::{Map, StorageMapWriteAccess, StorageMapReadAccess};
-
-    use crate::identity_registry::component::IdentityRegistryComponent;
     use crate::identity_registry::interface::IIdentityRegistry;
     use openzeppelin::access::ownable::OwnableComponent;
 

@@ -141,9 +141,13 @@ mod CompliantToken {
 
             for i in 0..self.required_claims.len() {
                 let claim = self.required_claims.at(i).read();
-                let claim_exists = receiver_onChainId_dispatcher.claim_exists(claim.topic, claim.issuer);
+                let claim_exists = receiver_onChainId_dispatcher
+                    .claim_exists(claim.topic, claim.issuer);
                 assert(claim_exists, 'Receiver should have the claim');
             };
+
+            let fee_amt = 0;
+            for i in self.complian
             self.erc20.transfer(recipient, amount)
         }
 
