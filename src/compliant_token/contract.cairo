@@ -1,10 +1,12 @@
 #[starknet::contract]
 mod CompliantToken {
-    use starknet::storage::{Vec, MutableVecTrait, StoragePointerWriteAccess};
+    use starknet::storage::{
+        Vec, MutableVecTrait, StoragePointerWriteAccess, StoragePointerReadAccess,
+    };
     use starknet::{ContractAddress, get_caller_address};
-    use acl::compliant_token::interface::{ICompliantToken, Claim};
-    use acl::acl::component::{AclComponent};
-    use acl::acl::interface::IAcl;
+    use crate::compliant_token::interface::{ICompliantToken, Claim};
+    use crate::acl::component::{AclComponent};
+    use crate::acl::interface::IAcl;
     use openzeppelin::token::erc20::{ERC20Component, ERC20HooksEmptyImpl};
     use openzeppelin::access::ownable::OwnableComponent;
     use openzeppelin::token::erc20::interface::IERC20Metadata;
@@ -12,6 +14,11 @@ mod CompliantToken {
     use core::integer::u256;
     use core::array::ArrayTrait;
     use core::traits::Into;
+    use core::num::traits::Zero;
+    use acl::onchain_id::interface::{IOnchainIdDispatcher, IOnchainIdDispatcherTrait};
+    use crate::identity_registry::interface::{
+        IIdentityRegistryDispatcher, IIdentityRegistryDispatcherTrait,
+    };
 
     component!(path: ERC20Component, storage: erc20, event: erc20);
     component!(path: AclComponent, storage: acl, event: acl);
@@ -34,6 +41,7 @@ mod CompliantToken {
     pub struct Storage {
         pub required_claims: Vec<Claim>,
         pub compliance_modules: Vec<ContractAddress>,
+        pub identity_registry: IIdentityRegistryDispatcher,
         #[substorage(v0)]
         pub erc20: ERC20Component::Storage,
         #[substorage(v0)]
@@ -56,8 +64,14 @@ mod CompliantToken {
 
 
     #[constructor]
-    fn constructor(ref self: ContractState, owner: ContractAddress) {
+    fn constructor(
+        ref self: ContractState, owner: ContractAddress, identity_registry: ContractAddress,
+    ) {
         self.ownable.initializer(owner);
+        let identity_registry_dispatcher = IIdentityRegistryDispatcher {
+            contract_address: identity_registry,
+        };
+        self.identity_registry.write(identity_registry_dispatcher);
     }
 
     #[abi(embed_v0)]
@@ -119,6 +133,17 @@ mod CompliantToken {
         }
 
         fn transfer(ref self: ContractState, recipient: ContractAddress, amount: u256) -> bool {
+            let receiver_onChainId_address = self.identity_registry.read().get_identity(recipient);
+            assert(receiver_onChainId_address.is_non_zero(), 'Receiver is not registered');
+            let receiver_onChainId_dispatcher = IOnchainIdDispatcher {
+                contract_address: receiver_onChainId_address,
+            };
+
+            for i in 0..self.required_claims.len() {
+                let claim = self.required_claims.at(i).read();
+                let claim_exists = receiver_onChainId_dispatcher.claim_exists(claim.topic, claim.issuer);
+                assert(claim_exists, 'Receiver should have the claim');
+            };
             self.erc20.transfer(recipient, amount)
         }
 
