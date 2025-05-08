@@ -1,9 +1,9 @@
 #[starknet::component]
 pub mod AclComponent {
     use acl::acl::interface::IAcl;
+    use core::poseidon;
     use starknet::ContractAddress;
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
-    use core::poseidon;
 
     #[storage]
     pub struct Storage {
@@ -27,20 +27,19 @@ pub mod AclComponent {
             let hash = poseidon::poseidon_hash_span(args);
             self.approvals.write((function_selector, hash, to), true);
         }
-
     }
 
     #[generate_trait]
-    pub impl IAclInternalImpl< TContractState, +HasComponent<TContractState>> of IAclInternal<TContractState> {
-        fn is_approved(
-            self: @ComponentState<TContractState>,
-            args: Span<felt252>,
-        ) -> bool {
+    pub impl IAclInternalImpl<
+        TContractState, +HasComponent<TContractState>,
+    > of IAclInternal<TContractState> {
+        fn is_approved(self: @ComponentState<TContractState>, args: Span<felt252>) -> bool {
             let hash = poseidon::poseidon_hash_span(args);
             let execution_info = starknet::get_execution_info().unbox();
-            let approved_till = self.approvals.read((execution_info.entry_point_selector, hash, starknet::get_caller_address()));
+            let approved_till = self
+                .approvals
+                .read((execution_info.entry_point_selector, hash, starknet::get_caller_address()));
             approved_till
         }
     }
-    
 }
