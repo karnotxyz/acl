@@ -22,3 +22,8 @@ pub mod compliance {
     pub mod interface;
     pub mod contract;
 }
+
+pub mod invoice_registry {
+    pub mod interface;
+    pub mod contract;
+}
