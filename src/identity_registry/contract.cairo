@@ -1,10 +1,13 @@
 #[starknet::contract]
 pub mod identity_registry {
     use starknet::{ContractAddress, SyscallResultTrait, ClassHash, get_caller_address};
-    use starknet::storage::{Map, StorageMapWriteAccess, StorageMapReadAccess, StoragePointerReadAccess, StoragePointerWriteAccess};
+    use starknet::storage::{
+        Map, StorageMapWriteAccess, StorageMapReadAccess, StoragePointerReadAccess,
+        StoragePointerWriteAccess,
+    };
     use crate::identity_registry::interface::IIdentityRegistry;
     use openzeppelin::access::ownable::OwnableComponent;
-    use starknet::syscalls:: deploy_syscall ;
+    use starknet::syscalls::deploy_syscall;
 
     component!(path: OwnableComponent, storage: ownable, event: ownable);
 
@@ -51,7 +54,7 @@ pub mod identity_registry {
             self.identity.read(user_address)
         }
 
-        fn get_new_identity(ref self: ContractState, user: ContractAddress) ->  ContractAddress {
+        fn get_new_identity(ref self: ContractState, user: ContractAddress) -> ContractAddress {
             self.onchain_id_salt.write(self.onchain_id_salt.read() + 1);
             let (onchain_id_address, _) = deploy_syscall(
                 self.onchainid_class_hash.read(),
@@ -61,8 +64,7 @@ pub mod identity_registry {
             )
                 .unwrap_syscall();
 
-
-            self.register_identity(user, onchain_id_address);            
+            self.identity.write(user, onchain_id_address);
             onchain_id_address
         }
 
