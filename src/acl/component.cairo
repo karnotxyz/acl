@@ -1,9 +1,9 @@
 #[starknet::component]
 pub mod AclComponent {
     use acl::acl::interface::IAcl;
+    use core::poseidon;
     use starknet::ContractAddress;
     use starknet::storage::{Map, StorageMapReadAccess, StorageMapWriteAccess};
-    use core::poseidon;
 
     #[storage]
     pub struct Storage {
@@ -14,8 +14,8 @@ pub mod AclComponent {
     #[derive(Drop, starknet::Event)]
     pub enum Event {}
 
-    #[embeddable_as(ACLImpl)]
-    pub impl ACL<
+    #[embeddable_as(AclImpl)]
+    pub impl Acl<
         TContractState, +HasComponent<TContractState>,
     > of IAcl<ComponentState<TContractState>> {
         fn give_approval(
@@ -27,16 +27,18 @@ pub mod AclComponent {
             let hash = poseidon::poseidon_hash_span(args);
             self.approvals.write((function_selector, hash, to), true);
         }
+    }
 
-
-        fn is_approved(
-            self: @ComponentState<TContractState>,
-            caller: ContractAddress,
-            args: Span<felt252>,
-        ) -> bool {
+    #[generate_trait]
+    pub impl IAclInternalImpl<
+        TContractState, +HasComponent<TContractState>,
+    > of IAclInternal<TContractState> {
+        fn is_approved(self: @ComponentState<TContractState>, args: Span<felt252>) -> bool {
             let hash = poseidon::poseidon_hash_span(args);
             let execution_info = starknet::get_execution_info().unbox();
-            let approved_till = self.approvals.read((execution_info.entry_point_selector, hash, caller));
+            let approved_till = self
+                .approvals
+                .read((execution_info.entry_point_selector, hash, starknet::get_caller_address()));
             approved_till
         }
     }
