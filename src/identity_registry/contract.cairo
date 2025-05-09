@@ -32,7 +32,7 @@ pub mod identity_registry {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState, onchainid_hash: felt252) {
+    fn constructor(ref self: ContractState, onchainid_hash: ClassHash) {
         self.ownable.initializer(get_caller_address());
         self.onchainid_class_hash.write(onchainid_hash);
     }
