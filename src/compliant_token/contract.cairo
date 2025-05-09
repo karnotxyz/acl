@@ -1,5 +1,6 @@
 #[starknet::contract]
 mod CompliantToken {
+    use ERC20Component::InternalTrait;
     use starknet::storage::{
         Vec, MutableVecTrait, StoragePointerWriteAccess, StoragePointerReadAccess,
     };
@@ -66,9 +67,17 @@ mod CompliantToken {
 
     #[constructor]
     fn constructor(
-        ref self: ContractState, owner: ContractAddress, identity_registry: ContractAddress,
+        ref self: ContractState,
+        owner: ContractAddress,
+        identity_registry: ContractAddress,
+        initial_supply: felt252,
+        name: ByteArray,
+        symbol: ByteArray,
     ) {
         self.ownable.initializer(owner);
+        self.erc20.initializer(name, symbol);
+        self.erc20.mint(owner, initial_supply.into());
+
         let identity_registry_dispatcher = IIdentityRegistryDispatcher {
             contract_address: identity_registry,
         };
